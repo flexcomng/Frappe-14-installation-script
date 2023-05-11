@@ -7,6 +7,11 @@ echo "We will need your ""sudo"" password and your required SQL root passwords"
 read -s -p "What is your sudo password? " passwrd
 echo -e "\n"
 read -s -p "What is your required SQL root password? " sqlpasswrd
+# Go to the home directory
+cd $HOME
+#Now let's make sure your instance has the most updated packages
+echo $passwd | sudo apt update
+echo $passwd | sudo apt upgrade -y
 #Now let's install a couple of requirements: git, curl and pip
 echo "Now let's install a couple of requirements: git, curl and pip"
 echo $passwrd | sudo -S apt -qq install nano git curl python3-dev python3.10-dev python3-pip -y
@@ -42,7 +47,7 @@ curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-nvm install 16.15.0
+nvm install 16
 echo $passwrd | sudo -S apt-get -qq install npm -y
 echo $passwrd | sudo -S npm install -g yarn
 #We need cron
@@ -60,9 +65,12 @@ read -p "Response: " continue_prod
 
 if [ "$continue_prod" == "yes" ]; then
 
+  # Prompt user for site name
+  read -p "Enter the site name (If you wish to install SSL later, please enter a FQDN): " site_name
+
   # Install expect tool only if needed
   echo $passwrd | sudo -S apt -qq install expect -y
-
+  
   # Prompt user for site name
   read -p "Enter the site name: " site_name
 
@@ -90,7 +98,7 @@ if [ "$continue_prod" == "yes" ]; then
   echo "$SECURE_MYSQL"
 
   # Setup supervisor and nginx config
-  sudo bench setup production $USER && \
+  yes | sudo bench setup production $USER && \
 
   # Change ownership of supervisord.conf
   sudo sed -i '6i chown='"$USER"':'"$USER"'' /etc/supervisor/supervisord.conf && \
@@ -99,7 +107,7 @@ if [ "$continue_prod" == "yes" ]; then
   sudo service supervisor restart && \
 
   # Setup production again to reflect the new site
-  sudo bench setup production $USER && \
+  yes | sudo bench setup production $USER && \
 
   # Enable and resume the scheduler for the site
   bench --site $site_name enable-scheduler && \
