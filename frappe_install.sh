@@ -54,3 +54,46 @@ echo $passwrd | sudo -S pip3 install frappe-bench
 #Initiate bench in frappe-bench folder, but get a supervisor can't restart bench error...
 echo "Initiate bench in frappe-bench folder, but get a supervisor can't restart bench error..."
 bench init --frappe-branch version-14 frappe-bench
+
+echo "Would you like to continue with production install? (yes/no)"
+read -p "Response: " continue_prod
+
+if [ "$continue_prod" == "yes" ]; then
+
+  # Prompt user for site name
+  read -p "Enter the site name: " site_name
+
+  # Change directory to frappe-bench
+  cd frappe-bench && \
+
+  # Get ERPNext app
+  bench get-app erpnext --branch version-14 && \
+
+  # Get payments app
+  bench get-app payments && \
+
+  # Create new site
+  bench new-site $site_name && \
+
+  # Setup supervisor and nginx config
+  sudo bench setup production $USER && \
+
+  # Change ownership of supervisord.conf
+  sudo sed -i '6i chown='"$USER"':'"$USER"'' /etc/supervisor/supervisord.conf && \
+
+  # Restart supervisor
+  sudo service supervisor restart && \
+
+  # Setup production again to reflect the new site
+  sudo bench setup production $USER && \
+
+  # Enable and resume the scheduler for the site
+  bench --site $site_name enable-scheduler && \
+  bench --site $site_name resume && \
+
+  # Restart bench
+  bench restart
+else
+  echo "Skipping production install..."
+fi
+
