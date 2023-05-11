@@ -60,6 +60,9 @@ read -p "Response: " continue_prod
 
 if [ "$continue_prod" == "yes" ]; then
 
+  # Install expect tool only if needed
+  echo $passwrd | sudo -S apt -qq install expect -y
+
   # Prompt user for site name
   read -p "Enter the site name: " site_name
 
@@ -72,8 +75,19 @@ if [ "$continue_prod" == "yes" ]; then
   # Get payments app
   bench get-app payments && \
 
+
+  bench get-app hrms --branch version-14 && \
+
   # Create new site
-  bench new-site $site_name && \
+  SECURE_MYSQL=$(expect -c "
+  set timeout 10
+  bench new-site $site_name --install-app erpnext hrms && \
+   expect \"MySQL root password:\"
+  send \"$sqlpasswrd\r\"
+  expect eof
+  ")
+
+  echo "$SECURE_MYSQL"
 
   # Setup supervisor and nginx config
   sudo bench setup production $USER && \
